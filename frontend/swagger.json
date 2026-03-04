@@ -1,0 +1,1602 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Hogwarts Academy API",
+    "version": "1.0.0",
+    "description": "API documentation for the Hogwarts Academy Classroom Management System. All endpoints require a valid session granted by the Ministry of Magic (Better Auth).",
+    "contact": {
+      "name": "Headmaster's Office",
+      "email": "support@hogwarts.edu"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development (Room of Requirement)"
+    },
+    {
+      "url": "https://api.hogwarts.refine.dev",
+      "description": "Production (The Great Hall)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "better-auth.session"
+      }
+    },
+    "schemas": {
+      "Class": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "maxLength": 255, "description": "Name of the class (e.g., 'Advanced Patronus Workshop')" },
+          "inviteCode": { "type": "string", "maxLength": 20, "description": "Joining code students use to enroll (e.g., 'LUMOS2024')" },
+          "subjectId": { "type": "integer", "description": "ID of the spell/subject this class covers" },
+          "professorId": { "type": "string", "description": "ID of the professor teaching this class" },
+          "description": { "type": "string", "nullable": true },
+          "bannerUrl": { "type": "string", "nullable": true },
+          "bannerCldPubId": { "type": "string", "nullable": true, "description": "Cloudinary public ID for class banner image" },
+          "capacity": { "type": "integer", "default": 50, "description": "Maximum number of students allowed in the class" },
+          "status": { "type": "string", "enum": ["active", "inactive", "archived"], "default": "active", "description": "active = currently running, inactive = not yet started, archived = completed" },
+          "schedules": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" }, "default": [] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "inviteCode", "subjectId", "professorId", "status", "schedules", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "ClassCreate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "inviteCode": { "type": "string", "maxLength": 20, "description": "Unique joining code (e.g., 'EXPECTO2024')" },
+          "subjectId": { "type": "integer" },
+          "professorId": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "bannerUrl": { "type": "string", "nullable": true },
+          "bannerCldPubId": { "type": "string", "nullable": true },
+          "capacity": { "type": "integer" },
+          "status": { "type": "string", "enum": ["active", "inactive", "archived"] },
+          "schedules": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" } }
+        },
+        "required": ["name", "inviteCode", "subjectId", "professorId"],
+        "additionalProperties": false
+      },
+      "ClassUpdate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 255 },
+          "inviteCode": { "type": "string", "maxLength": 20 },
+          "subjectId": { "type": "integer" },
+          "professorId": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "bannerUrl": { "type": "string", "nullable": true },
+          "bannerCldPubId": { "type": "string", "nullable": true },
+          "capacity": { "type": "integer" },
+          "status": { "type": "string", "enum": ["active", "inactive", "archived"] },
+          "schedules": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" } }
+        },
+        "additionalProperties": false
+      },
+      "Department": {
+        "type": "object",
+        "description": "A magical discipline at Hogwarts (e.g., Potions, Transfiguration, Defense Against the Dark Arts)",
+        "properties": {
+          "id": { "type": "integer" },
+          "code": { "type": "string", "maxLength": 50, "description": "Short department code (e.g., 'DADA', 'POT', 'CHM')" },
+          "name": { "type": "string", "maxLength": 255, "description": "Full department name (e.g., 'Defense Against the Dark Arts')" },
+          "description": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "code", "name", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "DepartmentCreate": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "maxLength": 50, "description": "Short department code (e.g., 'DADA', 'POT', 'CHM')" },
+          "name": { "type": "string", "maxLength": 255 },
+          "description": { "type": "string", "nullable": true }
+        },
+        "required": ["code", "name"],
+        "additionalProperties": false
+      },
+      "DepartmentUpdate": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "maxLength": 50 },
+          "name": { "type": "string", "maxLength": 255 },
+          "description": { "type": "string", "nullable": true }
+        },
+        "additionalProperties": false
+      },
+      "Enrollment": {
+        "type": "object",
+        "description": "Records a student's enrollment in a class. A student cannot be enrolled in the same class twice.",
+        "properties": {
+          "id": { "type": "integer" },
+          "studentId": { "type": "string" },
+          "classId": { "type": "integer" },
+          "enrolledAt": { "type": "string", "format": "date-time", "description": "Timestamp when the student joined the class" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "studentId", "classId", "enrolledAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "EnrollmentCreate": {
+        "type": "object",
+        "description": "Enroll the authenticated student in a class by class ID",
+        "properties": { "classId": { "type": "integer" } },
+        "required": ["classId"],
+        "additionalProperties": false
+      },
+      "EnrollmentJoin": {
+        "type": "object",
+        "description": "Enroll in a class using a professor-provided joining code (e.g., 'LUMOS2024')",
+        "properties": {
+          "inviteCode": { "type": "string", "description": "The joining code shared by the professor (e.g., 'EXPECTO2024')" }
+        },
+        "required": ["inviteCode"],
+        "additionalProperties": false
+      },
+      "Subject": {
+        "type": "object",
+        "description": "A spell or magical subject taught within a department (e.g., 'Patronus Charm', 'Polyjuice Potion')",
+        "properties": {
+          "id": { "type": "integer" },
+          "departmentId": { "type": "integer" },
+          "name": { "type": "string", "maxLength": 255, "description": "Name of the spell or subject (e.g., 'Patronus Charm')" },
+          "code": { "type": "string", "maxLength": 50, "description": "Subject code (e.g., 'DADA-501', 'POT-401')" },
+          "description": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "departmentId", "name", "code", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "SubjectCreate": {
+        "type": "object",
+        "properties": {
+          "departmentId": { "type": "integer" },
+          "name": { "type": "string", "maxLength": 255 },
+          "code": { "type": "string", "maxLength": 50, "description": "Subject code (e.g., 'DADA-501', 'POT-401')" },
+          "description": { "type": "string", "nullable": true }
+        },
+        "required": ["departmentId", "name", "code"],
+        "additionalProperties": false
+      },
+      "SubjectUpdate": {
+        "type": "object",
+        "properties": {
+          "departmentId": { "type": "integer" },
+          "name": { "type": "string", "maxLength": 255 },
+          "code": { "type": "string", "maxLength": 50 },
+          "description": { "type": "string", "nullable": true }
+        },
+        "additionalProperties": false
+      },
+      "User": {
+        "type": "object",
+        "description": "A Hogwarts Academy user — student, professor, or headmaster",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email", "description": "Hogwarts email address (e.g., harry@hogwarts.edu)" },
+          "emailVerified": { "type": "boolean" },
+          "image": { "type": "string", "nullable": true, "description": "Avatar/portrait URL" },
+          "imageCldPubId": { "type": "string", "nullable": true },
+          "role": {
+            "type": "string",
+            "enum": ["headmaster", "professor", "student"],
+            "default": "student",
+            "description": "headmaster = full platform access | professor = create classes & award points | student = enroll & view"
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "email", "emailVerified", "role", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "UserCreate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "emailVerified": { "type": "boolean" },
+          "role": { "type": "string", "enum": ["headmaster", "professor", "student"] },
+          "image": { "type": "string", "nullable": true },
+          "imageCldPubId": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "name", "email", "role"],
+        "additionalProperties": false
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "emailVerified": { "type": "boolean" },
+          "role": { "type": "string", "enum": ["headmaster", "professor", "student"] },
+          "image": { "type": "string", "nullable": true },
+          "imageCldPubId": { "type": "string", "nullable": true }
+        },
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } }
+      },
+      "RegistrationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "description": "Machine-readable error code" },
+          "message": { "type": "string", "description": "Human-readable error message" }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": true
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "A single class session time slot",
+        "properties": {
+          "day": { "type": "string", "description": "Day of week (e.g., Mon, Tue, Wed)" },
+          "startTime": { "type": "string", "description": "Start time in HH:mm format" },
+          "endTime": { "type": "string", "description": "End time in HH:mm format" }
+        },
+        "required": ["day", "startTime", "endTime"],
+        "additionalProperties": false
+      },
+      "EnrollmentUpdate": {
+        "type": "object",
+        "properties": {
+          "classId": { "type": "integer" },
+          "studentId": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "SubjectWithDepartment": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Subject" },
+          {
+            "type": "object",
+            "properties": { "department": { "$ref": "#/components/schemas/Department" } },
+            "required": ["department"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Pagination": {
+        "type": "object",
+        "description": "Pagination metadata returned by all list endpoints",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "total": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        },
+        "required": ["page", "limit", "total", "totalPages"],
+        "additionalProperties": false
+      },
+      "DepartmentListItem": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Department" },
+          {
+            "type": "object",
+            "properties": {
+              "totalSubjects": { "type": "integer", "minimum": 0, "description": "Number of subjects (spells) within this department" }
+            },
+            "required": ["totalSubjects"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "DepartmentTotals": {
+        "type": "object",
+        "properties": {
+          "subjects": { "type": "integer", "minimum": 0, "description": "Total spells/subjects in this department" },
+          "classes": { "type": "integer", "minimum": 0, "description": "Total active classes running under this department" },
+          "enrolledStudents": { "type": "integer", "minimum": 0, "description": "Total students enrolled across all classes in this department" }
+        },
+        "required": ["subjects", "classes", "enrolledStudents"],
+        "additionalProperties": false
+      },
+      "DepartmentWithTotals": {
+        "type": "object",
+        "properties": {
+          "department": { "$ref": "#/components/schemas/Department" },
+          "totals": { "$ref": "#/components/schemas/DepartmentTotals" }
+        },
+        "required": ["department", "totals"],
+        "additionalProperties": false
+      }
+    },
+    "parameters": {
+      "Page": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 10 } },
+      "DepartmentId": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "SubjectId": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "ClassId": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+      "UserId": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "PageParam": { "name": "page", "in": "query", "description": "Page number (1-based)", "schema": { "type": "integer", "default": 1, "minimum": 1 } },
+      "LimitParam": { "name": "limit", "in": "query", "description": "Results per page", "schema": { "type": "integer", "default": 10, "minimum": 1 } },
+      "SearchParam": { "name": "search", "in": "query", "description": "Free-text search", "schema": { "type": "string" } }
+    }
+  },
+  "security": [{ "cookieAuth": [] }],
+  "paths": {
+    "api/auth/get-session": {
+      "get": {
+        "summary": "Get current session",
+        "description": "Returns the currently authenticated user's session. Like checking your Hogwarts acceptance letter is still valid.",
+        "tags": ["Auth"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Active session info, or null if unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "user": { "type": "object", "description": "Authenticated Hogwarts user profile" },
+                        "session": { "type": "object", "description": "Active session metadata" }
+                      },
+                      "required": ["user", "session"],
+                      "additionalProperties": true
+                    },
+                    { "type": "null", "description": "No active session — user must sign in" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/auth/sign-in/email": {
+      "post": {
+        "summary": "Sign in with email",
+        "description": "Authenticates a Hogwarts user and sets a session cookie. Like saying 'Alohomora' to unlock the gates.",
+        "tags": ["Auth"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "description": "Hogwarts email (e.g., harry@hogwarts.edu)" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in — session cookie set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "user": { "$ref": "#/components/schemas/User" } },
+                  "required": ["user"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/auth/sign-out": {
+      "post": {
+        "summary": "Sign out",
+        "description": "Clears the session cookie. The Marauder's Map goes blank.",
+        "tags": ["Auth"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Signed out successfully" },
+          "401": { "description": "Not authenticated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/auth/sign-up/email": {
+      "post": {
+        "summary": "Register a new Hogwarts account",
+        "description": "Creates a new account and signs the user in. Like receiving your owl-delivered Hogwarts acceptance letter for the first time.",
+        "tags": ["Auth"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name", "role"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" },
+                  "name": { "type": "string" },
+                  "role": { "type": "string", "enum": ["headmaster", "professor", "student"] },
+                  "imageCldPubId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account created — session cookie set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "user": { "type": "object" }, "session": { "type": "object" } },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegistrationErrorResponse" } } } },
+          "409": { "description": "Email already registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/auth/update-user": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Update current user profile",
+        "description": "Updates the authenticated user's own profile (name, avatar, etc.)",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } }
+        },
+        "responses": {
+          "200": { "description": "Profile updated" },
+          "400": { "description": "Bad request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/classes": {
+      "get": {
+        "summary": "List all classes",
+        "description": "Returns a paginated list of Hogwarts classes with optional filters. Accessible by all authenticated roles.",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Search by class name or joining code" },
+          { "in": "query", "name": "subjectId", "schema": { "type": "integer" }, "description": "Filter by subject/spell ID" },
+          { "in": "query", "name": "professorId", "schema": { "type": "string" }, "description": "Filter by professor ID" },
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["active", "inactive", "archived"] }, "description": "Filter by class status" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Classes retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Class" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create a new class",
+        "description": "Professors and headmasters can create a new Hogwarts class. A unique joining code is required (e.g., 'LUMOS2024').",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClassCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Class created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Class" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — professors and headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Subject or Professor not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Joining code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/classes/invite/{code}": {
+      "get": {
+        "summary": "Look up class by joining code",
+        "description": "Retrieve a class using its professor-issued joining code (e.g., 'LUMOS2024'). Accessible by all authenticated roles.",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "path", "name": "code", "required": true, "schema": { "type": "string" }, "description": "Class joining code (e.g., 'LUMOS2024')" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Class found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Class" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Invalid joining code — class not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/classes/{id}": {
+      "get": {
+        "summary": "Get class by ID",
+        "description": "Retrieve a specific class by ID. Accessible by all authenticated roles.",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Class retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Class" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Class not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "summary": "Update a class",
+        "description": "Update class details. Only the professor who owns the class or the headmaster can do this.",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClassUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Class updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Class" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Class or Subject not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Joining code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Delete a class",
+        "description": "Permanently removes a class. Only professors (own classes) or headmaster.",
+        "tags": ["Classes"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Class deleted",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"], "additionalProperties": false }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Class not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/classes/{id}/users": {
+      "get": {
+        "tags": ["Classes"],
+        "summary": "List class roster (professors and students)",
+        "description": "Returns the members of a class. Professors use this to view their student roster.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ClassId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "role", "in": "query", "schema": { "type": "string", "enum": ["professor", "student"] }, "required": false }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roster retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/departments": {
+      "get": {
+        "summary": "List all departments",
+        "description": "Returns a paginated list of Hogwarts magical disciplines (e.g., Potions, Charms, DADA). Accessible by all authenticated roles.",
+        "tags": ["Departments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Search by department name or code" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Departments retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/DepartmentListItem" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create a new department",
+        "description": "Only the headmaster can establish new magical disciplines at Hogwarts.",
+        "tags": ["Departments"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Department created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Department" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Department code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/departments/{id}": {
+      "get": {
+        "summary": "Get department by ID",
+        "description": "Returns the department with its subject count, class count, and enrolled student totals.",
+        "tags": ["Departments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Department with totals retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/DepartmentWithTotals" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Department not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "summary": "Update a department",
+        "description": "Only the headmaster can update department details.",
+        "tags": ["Departments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DepartmentUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Department updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Department" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Department not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Department code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Delete a department",
+        "description": "Only the headmaster can delete departments. Use with caution — this affects all subjects and classes beneath it.",
+        "tags": ["Departments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Department deleted",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"], "additionalProperties": false }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Department not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/departments/{id}/classes": {
+      "get": {
+        "tags": ["Departments"],
+        "summary": "List classes within a department",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/DepartmentId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive", "archived"] }, "required": false }
+        ],
+        "responses": {
+          "200": {
+            "description": "Classes listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Class" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/departments/{id}/subjects": {
+      "get": {
+        "tags": ["Departments"],
+        "summary": "List spells/subjects within a department",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/DepartmentId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subjects listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Subject" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/departments/{id}/users": {
+      "get": {
+        "tags": ["Departments"],
+        "summary": "List professors and students in a department",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/DepartmentId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "role", "in": "query", "schema": { "type": "string", "enum": ["professor", "student"] }, "required": false },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "required": false }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/enrollments": {
+      "get": {
+        "summary": "List all enrollments",
+        "description": "Returns a paginated list of all enrollments. Accessible by headmaster and professors.",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "classId", "schema": { "type": "integer" }, "description": "Filter by class ID" },
+          { "in": "query", "name": "studentId", "schema": { "type": "string" }, "description": "Filter by student ID" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enrollments retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Enrollment" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Enroll in a class by class ID",
+        "description": "Enrolls the authenticated student in a class. Student ID is taken automatically from the session.",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnrollmentCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Student has joined the class",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Enrollment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Class or Student not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Student already enrolled in this class", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/enrollments/join": {
+      "post": {
+        "summary": "Join a class using a joining code",
+        "description": "Enrolls the authenticated student using a professor-issued joining code (e.g., 'LUMOS2024').",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnrollmentJoin" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Student has joined the class via joining code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Enrollment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Invalid joining code — class not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Student already enrolled in this class", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/enrollments/{id}": {
+      "get": {
+        "summary": "Get enrollment by ID",
+        "description": "Retrieve a specific enrollment record. Accessible by headmaster and professors.",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Enrollment retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Enrollment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Enrollment not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "summary": "Update an enrollment",
+        "description": "Reassign enrollment to a different class or student. Headmaster and professors only.",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnrollmentUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrollment updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Enrollment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Enrollment, Class, or Student not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Student already enrolled in that class", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Remove an enrollment",
+        "description": "Removes a student from a class. Headmaster and professors only.",
+        "tags": ["Enrollments"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Student removed from class",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"], "additionalProperties": false }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Enrollment not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/subjects": {
+      "get": {
+        "summary": "List all spells/subjects",
+        "description": "Returns all subjects available at Hogwarts, each with its parent department included. Accessible by all authenticated roles.",
+        "tags": ["Subjects"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Search by name or code (e.g., 'DADA-501')" },
+          { "in": "query", "name": "department", "schema": { "type": "string" }, "description": "Filter by department name (fuzzy match)" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subjects retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/SubjectWithDepartment" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create a new subject/spell",
+        "description": "Add a new spell or subject to the Hogwarts curriculum. Headmaster and professors only.",
+        "tags": ["Subjects"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubjectCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Subject created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/SubjectWithDepartment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster or professor only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Department not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Subject code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/subjects/{id}": {
+      "get": {
+        "summary": "Get subject by ID",
+        "description": "Retrieve a specific spell/subject by ID with its department.",
+        "tags": ["Subjects"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Subject retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/SubjectWithDepartment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Subject not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "summary": "Update a subject",
+        "description": "Update a spell/subject. Headmaster and professors only.",
+        "tags": ["Subjects"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubjectUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Subject updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/SubjectWithDepartment" } },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Subject or Department not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Subject code already exists", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Delete a subject",
+        "description": "Remove a spell/subject from the curriculum. Headmaster and professors only.",
+        "tags": ["Subjects"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Subject deleted",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"], "additionalProperties": false }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "Subject not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/subjects/{id}/classes": {
+      "get": {
+        "tags": ["Subjects"],
+        "summary": "List classes for a subject",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SubjectId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive", "archived"] }, "required": false }
+        ],
+        "responses": {
+          "200": {
+            "description": "Classes listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Class" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/subjects/{id}/users": {
+      "get": {
+        "tags": ["Subjects"],
+        "summary": "List professors and students related to a subject",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SubjectId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "role", "in": "query", "schema": { "type": "string", "enum": ["professor", "student"] }, "required": false },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "required": false }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/users": {
+      "get": {
+        "summary": "List all Hogwarts users",
+        "description": "Returns all users on the platform. Headmaster only.",
+        "tags": ["Users"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "role", "schema": { "type": "string", "enum": ["headmaster", "professor", "student"] }, "description": "Filter by role" },
+          { "in": "query", "name": "search", "schema": { "type": "string" }, "description": "Search by name" },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" },
+                    "message": { "type": "string" }
+                  },
+                  "required": ["data", "pagination", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "post": {
+        "summary": "Create a new user",
+        "description": "Headmaster can manually create student, professor, or headmaster accounts.",
+        "tags": ["Users"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/User" }, "message": { "type": "string" } },
+                  "required": ["data", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "error": { "type": "string" }, "message": { "type": "string" } },
+                  "required": ["error", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/users/{id}": {
+      "get": {
+        "summary": "Get user by ID",
+        "description": "Retrieve a specific Hogwarts user. Headmaster only.",
+        "tags": ["Users"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "User retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/User" }, "message": { "type": "string" } },
+                  "required": ["data", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "error": { "type": "string" }, "message": { "type": "string" } },
+                  "required": ["error", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "summary": "Update a user",
+        "description": "Update a user's details (role, name, avatar). Headmaster only.",
+        "tags": ["Users"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/User" }, "message": { "type": "string" } },
+                  "required": ["data", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "error": { "type": "string" }, "message": { "type": "string" } },
+                  "required": ["error", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "error": { "type": "string" }, "message": { "type": "string" } },
+                  "required": ["error", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user",
+        "description": "Permanently removes a user from Hogwarts Academy. Headmaster only.",
+        "tags": ["Users"],
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": {
+            "description": "User removed from Hogwarts Academy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/User" }, "message": { "type": "string" } },
+                  "required": ["data", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "Forbidden — headmaster only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "error": { "type": "string" }, "message": { "type": "string" } },
+                  "required": ["error", "message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/users/{id}/departments": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List departments for a user",
+        "description": "Returns departments associated with a professor or student via their classes.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/UserId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Departments listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Department" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "api/users/{id}/subjects": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List subjects/spells for a user",
+        "description": "Returns spells and subjects associated with a professor or student.",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/UserId" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subjects listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/SubjectWithDepartment" } },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  },
+                  "required": ["data", "pagination"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "500": { "description": "Server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Auth", "description": "Authentication endpoints — the Ministry of Magic's approved session management (Better Auth)" },
+    { "name": "Classes", "description": "Hogwarts classes created by professors, joined by students via joining codes or browsing" },
+    { "name": "Departments", "description": "Magical disciplines (e.g., Potions, Charms, DADA). Only the headmaster can create or delete departments" },
+    { "name": "Subjects", "description": "Individual spells and subjects within a department (e.g., Patronus Charm, Polyjuice Potion)" },
+    { "name": "Enrollments", "description": "Track student enrollment in classes. Join via browsing or a professor's joining code" },
+    { "name": "Users", "description": "Hogwarts Academy users — students, professors, and the headmaster. Full CRUD restricted to the headmaster" }
+  ]
+}

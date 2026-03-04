@@ -1,14 +1,16 @@
 import React, {useMemo, useState} from 'react'
 import {ListView} from "@/components/refine-ui/views/list-view.tsx";
 import {Breadcrumb} from "@/components/refine-ui/layout/breadcrumb.tsx";
-import {Badge, Search} from "lucide-react";
+import { Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {DEPARTMENT_OPTIONS} from "@/constants";
 import {DataTable} from "@/components/refine-ui/data-table/data-table.tsx";
-import {useTable} from "@refinedev/core";
+
 import {ColumnDef} from "@tanstack/react-table";
 import {Subject} from "@/types";
+import {useTable} from "@refinedev/react-table";
 
 const SubjectsList = () => {
 
@@ -56,7 +58,9 @@ const SubjectsList = () => {
                 accessorKey: 'department',
                 size: 150,
                 header: () => <p className={"column-title"}>Department</p>,
-                cell: ({ getValue }) => <Badge variant={"secondary"}>{getValue<string>()}</Badge>,
+                cell: ({ getValue }) => (
+                    <Badge variant={"secondary"}>{getValue<string>()}</Badge>
+                ),
             },
             {
                 id: 'description',
