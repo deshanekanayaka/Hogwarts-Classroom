@@ -1,13 +1,10 @@
-import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import "dotenv/config";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined');
+  throw new Error("DATABASE_URL is not defined");
 }
 
 const sql = neon(process.env.DATABASE_URL);
-export const index = drizzle(sql);
-
-// For API compatibility with demo script; there is no pool for neon-http
-export const pool = undefined as unknown as { end: () => Promise<void> } | undefined;
+export const db = drizzle(sql);
