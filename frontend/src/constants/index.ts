@@ -98,7 +98,7 @@ const getEnvVar = (key: string): string => {
     return value;
 };
 
-export const BASE_URL = import.meta.env.VITE_API_URL;
+// export const BASE_URL = import.meta.env.VITE_API_URL;
 
 // Environment variable validation helper
 const requireEnv = (name: string, value: unknown): string => {

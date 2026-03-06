@@ -1,9 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react'
 import {UploadCloud} from "lucide-react";
 import {CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET} from "@/constants";
-import {UploadWidgetValue} from "@/types";
+import {UploadWidgetProps, UploadWidgetValue} from "@/types";
 
-const UploadWidget = ({value = null, onChange, disabled = false}) => {
+const UploadWidget = ({value = null, onChange, disabled = false}: UploadWidgetProps) => {
 
     const widgetRef = useRef<CloudinaryWidget | null>(null);
     // Ref to handle changes- to avoid stale closures
@@ -27,7 +27,7 @@ const UploadWidget = ({value = null, onChange, disabled = false}) => {
 
     //Goal - Always keep the onchange parameter
     useEffect(() => {
-        onChangeREf.current = onChangeREf;
+        onChangeREf.current = onChange;
     }, [onChange]);
 
     //Initialize cloudinary widget for client side
@@ -75,7 +75,27 @@ const UploadWidget = ({value = null, onChange, disabled = false}) => {
     const openWidget = () => {
         if(!disabled) widgetRef.current ?.open();
     }
-    const removeFromCloudinary = async () => {}
+    //Delete within 10 mins. (Refactor later)
+    const removeFromCloudinary = async () => {
+        if (!deleteToken) return;
+
+        setIsRemoving(true);
+        try {
+            await fetch(
+                `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/delete_by_token`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: deleteToken }),
+                }
+            );
+        } finally {
+            setPreview(null);
+            setDeleteToken(null);
+            setIsRemoving(false);
+            onChangeREf.current?.(null);
+        }
+    };
 
     return (
         <div className={"space-y-2"}>
