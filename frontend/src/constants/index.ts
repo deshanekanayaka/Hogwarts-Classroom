@@ -24,6 +24,25 @@ export const ROLE_OPTIONS = [
     },
 ];
 
+export const PROFESSORS = [
+    { id: "1", name: "Remus Lupin" },
+    { id: "2", name: "Severus Snape" },
+    { id: "3", name: "Minerva McGonagall" },
+    { id: "4", name: "Filius Flitwick" },
+    { id: "5", name: "Pomona Sprout" },
+];
+
+export const SUBJECTS = [
+    { id: 1, name: "Patronus Charm", code: "DADA-501" },
+    { id: 2, name: "Shield Charm", code: "DADA-301" },
+    { id: 3, name: "Polyjuice Potion", code: "POT-401" },
+    { id: 4, name: "Felix Felicis", code: "POT-501" },
+    { id: 5, name: "Levitation Charm", code: "CHM-101" },
+    { id: 6, name: "Wingardium Leviosa", code: "CHM-102" },
+    { id: 7, name: "Transfiguration Basics", code: "TRF-101" },
+    { id: 8, name: "Herbology Fundamentals", code: "HRB-101" },
+];
+
 export const DEPARTMENTS = [
     "Defense Against the Dark Arts",
     "Potions",
@@ -79,32 +98,32 @@ const getEnvVar = (key: string): string => {
     return value;
 };
 
+// export const BASE_URL = import.meta.env.VITE_API_URL;
 
-export const BACKEND_BASE_URL = getEnvVar("VITE_BACKEND_BASE_URL");
-export const BASE_URL = import.meta.env.VITE_API_URL;
+// Environment variable validation helper
+const requireEnv = (name: string, value: unknown): string => {
+    if (typeof value !== "string" || value.trim() === "") {
+        throw new Error(`[ENV] Missing required environment variable: ${name}`);
+    }
+    return value;
+};
 
-// export const CLOUDINARY_UPLOAD_URL = getEnvVar("VITE_CLOUDINARY_UPLOAD_URL");
-// export const CLOUDINARY_CLOUD_NAME = getEnvVar("VITE_CLOUDINARY_CLOUD_NAME");
-// export const ACCESS_TOKEN_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY;
-// export const REFRESH_TOKEN_KEY = import.meta.env.VITE_REFRESH_TOKEN_KEY;
-// export const REFRESH_TOKEN_URL = `${BASE_URL}/refresh-token`;
-// export const CLOUDINARY_UPLOAD_PRESET = getEnvVar("VITE_CLOUDINARY_UPLOAD_PRESET");
+export const CLOUDINARY_UPLOAD_URL = requireEnv(
+    "VITE_CLOUDINARY_UPLOAD_URL",
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_URL
+);
+export const CLOUDINARY_CLOUD_NAME = requireEnv(
+    "VITE_CLOUDINARY_CLOUD_NAME",
+    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+);
+export const BACKEND_BASE_URL = requireEnv(
+    "VITE_BACKEND_BASE_URL",
+    import.meta.env.VITE_BACKEND_BASE_URL
+);
 
-export const professors = [
-    { id: "1", name: "Remus Lupin" },
-    { id: "2", name: "Severus Snape" },
-    { id: "3", name: "Minerva McGonagall" },
-    { id: "4", name: "Filius Flitwick" },
-    { id: "5", name: "Pomona Sprout" },
-];
 
-export const subjects = [
-    { id: 1, name: "Patronus Charm", code: "DADA-501" },
-    { id: 2, name: "Shield Charm", code: "DADA-301" },
-    { id: 3, name: "Polyjuice Potion", code: "POT-401" },
-    { id: 4, name: "Felix Felicis", code: "POT-501" },
-    { id: 5, name: "Levitation Charm", code: "CHM-101" },
-    { id: 6, name: "Wingardium Leviosa", code: "CHM-102" },
-    { id: 7, name: "Transfiguration Basics", code: "TRF-101" },
-    { id: 8, name: "Herbology Fundamentals", code: "HRB-101" },
-];
+
+export const CLOUDINARY_UPLOAD_PRESET = requireEnv(
+    "VITE_CLOUDINARY_UPLOAD_PRESET",
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+);
