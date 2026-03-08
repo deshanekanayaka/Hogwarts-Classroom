@@ -49,10 +49,27 @@ const options: CreateDataProviderOptions = {
         //   convert filter val to str for query params
         const value = String(filter.value);
 
+        if (field === "role") {
+          params.role = value;
+        }
+
+        if (resource === "users") {
+          if (field === "search" || field === "name" || field === "email") {
+            params.search = value;
+          }
+        }
+
         //   Handle filter only for subjects resource
         if(resource === 'subjects') {
           if(field === 'department') params.department = value;
           if(field === 'name' || field === 'code') params.search = value;
+        }
+
+        // Handle filter for classes
+        if (resource === "classes") {
+          if (field === "name") params.search = value;
+          if (field === "subject") params.subject = value;
+          if (field === "professor") params.professor = value;
         }
       })
 

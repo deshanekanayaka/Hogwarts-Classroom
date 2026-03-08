@@ -34,7 +34,6 @@ import {Subject, User} from "@/types";
 import UploadWidget from "@/components/upload-widget.tsx";
 
 
-
 const ClassesCreate = () => {
     const back = useBack();
 
@@ -66,30 +65,6 @@ const ClassesCreate = () => {
         }
     };
 
-    const professors = [
-        {
-            id: "1",
-            name: "John",
-        },
-        {
-            id: "2",
-            name: "Jane",
-        }
-    ]
-
-    const subjects = [
-        {
-            id: 1,
-            name: "Maths",
-            code: "MATH",
-        },
-        {
-            id: 2,
-            name: "Comp Sci",
-            code: "CS",
-        }
-    ]
-
     // Fetch subjects list
     const { query: subjectsQuery } = useList<Subject>({
         resource: "subjects",
@@ -112,6 +87,12 @@ const ClassesCreate = () => {
             pageSize: 100,
         },
     });
+
+    const subjects = subjectsQuery.data?.data || [];
+    const subjectsLoading = subjectsQuery.isLoading;
+
+    const professors = professorsQuery.data?.data || [];
+    const professorsLoading = professorsQuery.isLoading;
 
     return (
         <CreateView className="class-view">
@@ -219,6 +200,7 @@ const ClassesCreate = () => {
                                                         field.onChange(Number(value))
                                                     }
                                                     value={field.value?.toString()}
+                                                    disabled={subjectsLoading}
 
                                                 >
                                                     <FormControl>
@@ -253,6 +235,7 @@ const ClassesCreate = () => {
                                                 <Select
                                                     onValueChange={field.onChange}
                                                     value={field.value?.toString()}
+                                                    disabled={professorsLoading}
 
                                                 >
                                                     <FormControl>
