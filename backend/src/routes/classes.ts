@@ -35,13 +35,13 @@ router.post("/", async (req, res) => {
             })
             .returning({ id: classes.id });
 
-        if (!createdClass) throw Error;
+        if (!createdClass) throw new Error("Failed to create class");
 
         res.status(201).json({ data: createdClass });
 
     } catch (e) {
         console.error(`POST / classes error: ${e}`);
-        res.status(500).json({ error: e });
+        res.status(500).json({ error: "Internal server error" });
     }
 })
 

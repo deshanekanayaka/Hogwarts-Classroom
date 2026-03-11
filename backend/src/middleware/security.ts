@@ -1,4 +1,6 @@
 import type {Request, Response, NextFunction} from "express";
+import {ArcjetNodeRequest, slidingWindow} from "@arcjet/node";
+import aj from "../config/arcjet";
 
 const securityMiddleware = async (req: Request,
                                   res: Response, next: NextFunction) => {
@@ -21,11 +23,11 @@ const securityMiddleware = async (req: Request,
         let message: string;
 
         switch (role) {
-            case "admin":
+            case "headmaster":
                 limit = 20;
-                message = "Admin request limit exceeded (20 per minute)";
+                message = "Headmaster request limit exceeded (20 per minute)";
                 break;
-            case "teacher":
+            case "professor":
             case "student":
                 limit = 10;
                 message = "Student request limit exceeded (10 per minute)";

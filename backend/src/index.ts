@@ -5,6 +5,9 @@ import classesRouter from "./routes/classes";
 import {toNodeHandler} from "better-auth/node";
 import {auth} from "./lib/auth";
 import securityMiddleware from "./middleware/security";
+import { fromNodeHeaders } from "better-auth/node";
+import usersRouter from "./routes/users";
+
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8000;
@@ -23,6 +26,21 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }))
+
+// Security Middleware
+app.use(securityMiddleware);
+
+const requireAuth = async (req, res, next) => {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    req.user = session.user;
+    next();
+};
+
+// Apply before mounting routes
+app.use('/api/classes',  classesRouter);
+app.use('/api/users',  usersRouter);
+
 // Better Auth
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
@@ -37,12 +55,8 @@ app.use('/api/subjects', subjectsRouter)
 app.use('/api/classes', classesRouter)
 
 // app.ts
-import usersRouter from "./routes/users";
-
 app.use("/api/users", usersRouter);
 
-// Security Middleware
-app.use(securityMiddleware);
 
 // Start server
 app.listen(PORT, () => {

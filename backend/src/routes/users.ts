@@ -1,4 +1,4 @@
-// routes/users.ts
+// routes/users.ts  
 import { Router } from "express";
 import { db } from "../db";
 import { user } from "../db/schema/auth";
