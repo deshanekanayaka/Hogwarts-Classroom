@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from "cors";
 import subjectsRouter from "./routes/subjects";
+import classesRouter from "./routes/classes";
 import {toNodeHandler} from "better-auth/node";
 import {auth} from "./lib/auth";
+import securityMiddleware from "./middleware/security";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8000;
@@ -32,10 +34,15 @@ app.get('/', (req, res) => {
 // Router for subjects
 app.use('/api/subjects', subjectsRouter)
 
+app.use('/api/classes', classesRouter)
+
 // app.ts
 import usersRouter from "./routes/users";
+
 app.use("/api/users", usersRouter);
 
+// Security Middleware
+app.use(securityMiddleware);
 
 // Start server
 app.listen(PORT, () => {
