@@ -1,14 +1,21 @@
-import express from 'express';
+import AgentAPI from "apminsight";
+AgentAPI.config();
+import express, { Request, Response, NextFunction } from 'express';
 import cors from "cors";
-import subjectsRouter from "./routes/subjects";
+import subjectsRouter from "./routes/subjects.js";
+import classesRouter from "./routes/classes.js";
+import {toNodeHandler} from "better-auth/node";
+import {auth} from "./lib/auth.js";
+import securityMiddleware from "./middleware/security.js";
+import { fromNodeHeaders } from "better-auth/node";
+import usersRouter from "./routes/users.js";
+
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8000;
 
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-// CORS
 const frontendUrl = process.env.FRONTEND_URL;
 
 if (!frontendUrl) {
@@ -20,16 +27,26 @@ app.use(cors({
     credentials: true
 }))
 
-// Root route
-app.get('/', (req, res) => {
+app.use(securityMiddleware);
+
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    (req as any).user = session.user;
+    next();
+};
+
+app.use('/api/classes', classesRouter);
+app.use('/api/users', usersRouter);
+
+app.all('/api/auth/*splat', toNodeHandler(auth));
+
+app.get('/', (req: Request, res: Response) => {
     res.send('Classroom backend is running');
 });
 
-// Router for subjects
 app.use('/api/subjects', subjectsRouter)
 
-// Start server
 app.listen(PORT, () => {
-    const url = `http://localhost:${PORT}`;
-    console.log(`Server started at ${url}`);
+    console.log(`Server started at http://localhost:${PORT}`);
 });
