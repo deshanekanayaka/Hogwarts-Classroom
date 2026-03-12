@@ -3,12 +3,12 @@ AgentAPI.config();
 import express, { Request, Response, NextFunction } from 'express';
 import cors from "cors";
 import subjectsRouter from "./routes/subjects.js";
-import classesRouter from "./routes/classes";
+import classesRouter from "./routes/classes.js";
 import {toNodeHandler} from "better-auth/node";
 import {auth} from "./lib/auth.js";
 import securityMiddleware from "./middleware/security.js";
 import { fromNodeHeaders } from "better-auth/node";
-import usersRouter from "./routes/users";
+import usersRouter from "./routes/users.js";
 
 
 const app = express();
