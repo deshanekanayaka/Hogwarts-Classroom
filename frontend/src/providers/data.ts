@@ -1,7 +1,6 @@
 import {createDataProvider, CreateDataProviderOptions} from "@refinedev/rest";
-import {ListResponse} from "@/types";
+import {CreateResponse, ListResponse} from "@/types";
 import {BACKEND_BASE_URL} from "@/constants";
-
 
 // NOTE: This file defines the options object that can be provided to
 // `createDataProvider(options)` so that refine knows how to build requests and
@@ -18,6 +17,7 @@ const options: CreateDataProviderOptions = {
   getList: {
     // Build the endpoint for the given resource name (e.g., "subjects" → "/subjects")
     getEndpoint: ({ resource }) => resource,
+
 
     // Convert the raw Response into the array of records expected by refine lists
     // Use response.clone() so we don't consume the body twice when getTotalCount also reads it
@@ -77,6 +77,19 @@ const options: CreateDataProviderOptions = {
 
     },
   },
+  // for POST event creation modify the data provider of refine to tell it
+  // how to call API s and the data to expect
+  create: {
+    getEndpoint: ({ resource }) => resource,
+
+    buildBodyParams: async ({ variables }) => variables,
+
+    mapResponse: async (response) => {
+      const json: CreateResponse = await response.json();
+
+      return json.data ?? {};
+    }
+  }
 
 
 }

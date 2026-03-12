@@ -47,7 +47,7 @@ const ClassesCreate = () => {
             status: "active",
         },
     });
-
+    //call refine’s on finish function to pass the values to the API and create a class
     const {
         refineCore: { onFinish },
         handleSubmit,
@@ -177,7 +177,7 @@ const ClassesCreate = () => {
                                             </FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    placeholder="Introduction to Biology - Section A"
+                                                    placeholder="Advanced Potions"
                                                     {...field}
                                                 />
                                             </FormControl>
