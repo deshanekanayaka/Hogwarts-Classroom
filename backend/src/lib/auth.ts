@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../db";
-import * as schema from "../db/schema/auth"
+import { db } from "../db/index.js";
+import * as schema from "../db/schema/auth.js";
 
 if (!process.env.BETTER_AUTH_SECRET) {
     throw new Error("BETTER_AUTH_SECRET environment variable is required");
