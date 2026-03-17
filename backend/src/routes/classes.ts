@@ -47,7 +47,7 @@ router.post("/", async (req, res) => {
 
 router.get("/", async (req, res) => {
     try {
-        const { search, subject, teacher, page = 1, limit = 10 } = req.query;
+        const { search, subject, professor, page = 1, limit = 10 } = req.query;
 
         const currentPage = Math.max(1, +page);
         const limitPerPage = Math.max(1, +limit);
@@ -68,8 +68,8 @@ router.get("/", async (req, res) => {
             filterConditions.push(ilike(subjects.name, `%${subject}%`));
         }
 
-        if (teacher) {
-            filterConditions.push(ilike(user.name, `%${teacher}%`));
+        if (professor) {
+            filterConditions.push(ilike(user.name, `%${professor}%`));
         }
 
         const whereClause =
@@ -90,7 +90,7 @@ router.get("/", async (req, res) => {
                 subject: {
                     ...getTableColumns(subjects),
                 },
-                teacher: {
+                professor: {
                     ...getTableColumns(user),
                 },
             })
