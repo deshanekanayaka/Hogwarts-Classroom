@@ -156,8 +156,12 @@ const ClassesList = () => {
     // Fetches all subjects so the "Filter by subject" dropdown is populated
     const { query: subjectsQuery } = useList<Subject>({
         resource: "subjects",
-        pagination: {
-            pageSize: 100,
+        pagination: { pageSize: 100 },
+        queryOptions: {
+            staleTime: 5 * 60 * 1000,       // cache for 5 minutes
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            retry: 0,                        // dropdown is non-critical; no automatic retries
         },
     });
 
