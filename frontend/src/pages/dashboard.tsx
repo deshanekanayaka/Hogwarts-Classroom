@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const stats = [
     {
         title: "Subjects",
-        description: "All available academic subjects across departments",
+        description: "All available academic subjects across departments.ts",
         icon: BookOpen,
         value: "Browse Subjects",
         color: "text-blue-500",
@@ -12,7 +12,7 @@ const stats = [
     },
     {
         title: "Departments",
-        description: "Academic departments organizing the curriculum",
+        description: "Academic departments.ts organizing the curriculum",
         icon: Building2,
         value: "View Departments",
         color: "text-emerald-500",
