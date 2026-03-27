@@ -1,56 +1,40 @@
-import {createDataProvider, CreateDataProviderOptions} from "@refinedev/rest";
-import {CreateResponse, ListResponse} from "@/types";
-import {BACKEND_BASE_URL} from "@/constants";
+import { createDataProvider, CreateDataProviderOptions } from "@refinedev/rest";
+import { CreateResponse, ListResponse } from "@/types";
+import { BACKEND_BASE_URL } from "@/constants";
 
-// NOTE: This file defines the options object that can be provided to
-// `createDataProvider(options)` so that refine knows how to build requests and
-// interpret responses for list queries.
-//
-// Currently we only define the `getList` behavior:
-// - `getEndpoint`: how to resolve the URL path for a given resource
-// - `mapResponse`: how to extract the array of records from the raw `fetch` Response
-// - `getTotalCount`: how to calculate the total number of records (for pagination)
-//
-
-// Create endpoints configuration for list fetching
 const options: CreateDataProviderOptions = {
   getList: {
-    // Build the endpoint for the given resource name (e.g., "subjects" → "/subjects")
     getEndpoint: ({ resource }) => resource,
 
-
-    // Convert the raw Response into the array of records expected by refine lists
-    // Use response.clone() so we don't consume the body twice when getTotalCount also reads it
     mapResponse: async (response) => {
       const payload: ListResponse = await response.clone().json();
-      // Many APIs return `{ data: [...] }`; if not present, default to empty array
       return payload.data ?? [];
     },
 
-    // Provide total count used by refine's pagination controls
     getTotalCount: async (response) => {
       const payload: ListResponse = await response.json();
-      // Prefer explicit pagination total; fallback to the array length; then 0
       return payload.pagination?.total ?? payload.data?.length ?? 0;
     },
 
-    buildQueryParams: async ({ resource, pagination, filters}) => {
-
-      const page = pagination?.currentPage ?? 1;  //coming from backend
+    buildQueryParams: async ({ resource, pagination, filters }) => {
+      const page = pagination?.currentPage ?? 1;
       const pageSize = pagination?.pageSize ?? 10;
 
-      const params: Record<string, string|number> = { page, limit: pageSize};
+      const params: Record<string, string | number> = { page, limit: pageSize };
 
-      //   loop through all refine filters
       filters?.forEach((filter) => {
-        // extract field     if exists filter.field or empty str
-        const field = 'field' in filter ? filter.field: '';
-
-        //   convert filter val to str for query params
+        const field = "field" in filter ? filter.field : "";
         const value = String(filter.value);
 
+        // Role filter — applies to any resource (e.g. /departments/:id/users?role=professor)
         if (field === "role") {
           params.role = value;
+        }
+
+        // --- Per-resource search mappings ---
+
+        if (resource === "departments") {
+          if (field === "name" || field === "code") params.search = value;
         }
 
         if (resource === "users") {
@@ -59,26 +43,22 @@ const options: CreateDataProviderOptions = {
           }
         }
 
-        //   Handle filter only for subjects resource
-        if(resource === 'subjects') {
-          if(field === 'department') params.department = value;
-          if(field === 'name' || field === 'code') params.search = value;
+        if (resource === "subjects") {
+          if (field === "department") params.department = value;
+          if (field === "name" || field === "code") params.search = value;
         }
 
-        // Handle filter for classes
         if (resource === "classes") {
           if (field === "name") params.search = value;
           if (field === "subject") params.subject = value;
           if (field === "professor") params.professor = value;
         }
-      })
+      });
 
       return params;
-
     },
   },
-  // for POST event creation modify the data provider of refine to tell it
-  // how to call API s and the data to expect
+
   create: {
     getEndpoint: ({ resource }) => resource,
 
@@ -86,13 +66,10 @@ const options: CreateDataProviderOptions = {
 
     mapResponse: async (response) => {
       const json: CreateResponse = await response.json();
-
       return json.data ?? {};
-    }
-  }
-
-
-}
+    },
+  },
+};
 
 const { dataProvider } = createDataProvider(BACKEND_BASE_URL, options);
 
