@@ -2,6 +2,21 @@ import { createDataProvider, CreateDataProviderOptions } from "@refinedev/rest";
 import { CreateResponse, ListResponse } from "@/types";
 import { BACKEND_BASE_URL } from "@/constants";
 
+import {createDataProvider, CreateDataProviderOptions} from "@refinedev/rest";
+import {CreateResponse, GetOneResponse, ListResponse} from "@/types";
+import {BACKEND_BASE_URL} from "@/constants";
+
+// NOTE: This file defines the options object that can be provided to
+// `createDataProvider(options)` so that refine knows how to build requests and
+// interpret responses for list queries.
+//
+// Currently we only define the `getList` behavior:
+// - `getEndpoint`: how to resolve the URL path for a given resource
+// - `mapResponse`: how to extract the array of records from the raw `fetch` Response
+// - `getTotalCount`: how to calculate the total number of records (for pagination)
+//
+
+// Create endpoints configuration for list fetching
 const options: CreateDataProviderOptions = {
   getList: {
     getEndpoint: ({ resource }) => resource,
@@ -70,6 +85,21 @@ const options: CreateDataProviderOptions = {
     },
   },
 };
+    }
+  },
+  //Get details of a single resource. Eg- class.
+  getOne: {
+    getEndpoint: ({ resource, id }) => `${resource}/${id}`,
+
+    mapResponse: async (response) => {
+      const json: GetOneResponse = await response.json();
+
+      return json.data ?? null;
+    }
+  }
+
+}
+
 
 const { dataProvider } = createDataProvider(BACKEND_BASE_URL, options);
 

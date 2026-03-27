@@ -37,9 +37,6 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     next();
 };
 
-app.use('/api/classes', classesRouter);
-app.use('/api/users', usersRouter);
-
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.get('/', (req: Request, res: Response) => {
@@ -48,7 +45,9 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/subjects', subjectsRouter)
 app.use('/api/departments', departmentsRouter)
+app.use('/api/classes', classesRouter);
+app.use('/api/users', usersRouter);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server started at http://localhost:${PORT}`);
 });
