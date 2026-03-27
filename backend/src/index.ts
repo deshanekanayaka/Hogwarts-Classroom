@@ -4,6 +4,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from "cors";
 import subjectsRouter from "./routes/subjects.js";
 import classesRouter from "./routes/classes.js";
+import departmentsRouter from "./routes/departments.js";
 import {toNodeHandler} from "better-auth/node";
 import {auth} from "./lib/auth.js";
 import securityMiddleware from "./middleware/security.js";
@@ -46,6 +47,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.use('/api/subjects', subjectsRouter)
+app.use('/api/departments', departmentsRouter)
 
 app.listen(PORT, () => {
     console.log(`Server started at http://localhost:${PORT}`);
